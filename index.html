@@ -1,4 +1,76 @@
-<!DOCTYPE html>
+        // 更新显示数量
+        const visibleItems = document.querySelectorAll('#portfolio-grid > div').length;
+        const portfolioGrid = document.getElementById('portfolio-grid');
+        
+        // 获取当前分类
+        const activeCategory = document.querySelector('.category-btn.active').dataset.category;
+        
+        // 筛选作品
+        const filteredItems = activeCategory === 'all' 
+          ? portfolioData 
+          : portfolioData.filter(item => item.category === activeCategory);
+        
+        // 计算要加载的项目
+        const startIndex = visibleItems;
+        const endIndex = startIndex + 3;
+        const newItems = filteredItems.slice(startIndex, endIndex);
+        
+        // 添加新项目
+        newItems.forEach(item => {
+          const portfolioItem = document.createElement('div');
+          portfolioItem.className = 'bg-gray-900 rounded-xl overflow-hidden shadow-lg card-hover fade-in-section';
+          portfolioItem.dataset.category = item.category;
+          portfolioItem.dataset.id = item.id;
+          
+          portfolioItem.innerHTML = `
+            <div class="relative aspect-[4/5] overflow-hidden">
+              <img src="${item.images[0]}" alt="${item.title}" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 hover:opacity-100 transition-opacity flex items-end">
+                <div class="p-4">
+                  <h3 class="text-xl font-bold text-white">${item.title}</h3>
+                  <p class="text-gray-300 text-sm">${item.category}</p>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          // 点击事件
+          portfolioItem.addEventListener('click', () => openPortfolioModal(item.id));
+          
+          portfolioGrid.appendChild(portfolioItem);
+        });
+        
+        // 触发滚动动画
+        setTimeout(() => {
+          const fadeElements = document.querySelectorAll('.fade-in-section');
+          fadeElements.forEach(element => {
+            element.classList.add('is-visible');
+          });
+        }, 100);
+        
+        // 更新按钮状态
+        loadMoreBtn.innerHTML = '加载更多作品';
+        if (endIndex >= filteredItems.length) {
+          loadMoreBtn.classList.add('hidden');
+        }
+      }, 1000);
+    });
+
+
+    Get category color
+    function getCategoryColor(category) {
+      switch (category) {
+        case '3D modeling': return 'primary';
+case 'Render': return 'secondary';
+        case 'Amazon Main Image': return 'yellow-500';
+        case 'A+ Content': return 'purple-500';
+        default: return 'gray-500';
+}
+    }
+  </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+<html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -1417,3 +1489,4 @@
   </script>
   <script type="module" src="/index.tsx"></script>
 </body>
+<>  
