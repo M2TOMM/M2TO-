@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D设计师作品集 | 专业3D建模与渲染</title>
+  <!-- Tailwind CSS v3 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <!-- Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- GSAP 动画库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/ScrollTrigger.min.js"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            dark: '#121212',
+            light: '#F9FAFB',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          height: {
+            '128': '32rem',
+          },
+          animation: {
+            'float': 'float 6s ease-in-out infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .text-shadow-lg {
+        text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      }
+      .bg-gradient-radial {
+        background-image: radial-gradient(circle, var(--tw-gradient-stops));
+      }
+      .backdrop-blur-xl {
+        backdrop-filter: blur(24px);
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    }
+    
+    /* 自定义样式 */
+    body {
+      background-color: #121212;
+      color: #F9FAFB;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    
+    .hero-gradient {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+    }
+    
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .model-container {
+      width: 100%;
+      height: 400px;
+      background-color: rgba(18, 18, 18, 0.8);
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    
+    .upload-area {
+      border: 2px dashed rgba(59, 130, 246, 0.5);
+      transition: all 0.3s ease;
+    }
+    
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #3B82F6;
+      background-color: rgba(59, 130, 246, 0.05);
+    }
+    
+    .category-btn.active {
+      background-color: #3B82F6;
+      color: white;
+    }
+    
+    /* 打字机效果 */
+    .typing::after {
+      content: '|';
+      animation: blink 1s infinite;
+    }
+    
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    
+    /* 滚动显示动画 */
+    .fade-in-section {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+    
+    .fade-in-section.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    /* 3D模型控制器样式 */
+    .controls-overlay {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+    
+    .control-btn {
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .control-btn:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- 导航栏 -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-dark/80 backdrop-blur-xl border-b border-gray-800">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="#" class="text-2xl font-bold text-white flex items-center">
+        <span class="text-primary">3D</span>Designer
+      </a>
+      
+      <!-- 桌面导航 -->
+      <div class="hidden md:flex items-center space-x-8">
+        <a href="#portfolio" class="text-gray-300 hover:text-white transition-colors">作品集</a>
+        <a href="#about" class="text-gray-300 hover:text-white transition-colors">关于我</a>
+        <a href="#upload" class="text-gray-300 hover:text-white transition-colors">上传作品</a>
+        <a href="#contact" class="text-gray-300 hover:text-white transition-colors">联系我</a>
+        <!-- 核心修改：将 fa-envelope 改为 fa-qq -->
+        <a href="#" class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">
+          <i class="fa fa-qq mr-2" data-doubao-line="184" data-doubao-column="11"></i>预约咨询
+        </a>
+      </div>
+      
+      <!-- 移动端菜单按钮 -->
+      <button id="menu-toggle" class="md:hidden text-white focus:outline-none">
+        <i class="fa fa-bars text-xl"></i>
+      </button>
+    </div>
+    
+    <!-- 移动端导航菜单 -->
+    <div id="mobile-menu" class="hidden md:hidden bg-dark/95 backdrop-blur-xl border-b border-gray-800">
+      <div class="container mx-auto px-4 py-4 flex flex-col space-y-4">
+        <a href="#portfolio" class="text-gray-300 hover:text-white transition-colors py-2">作品集</a>
+        <a href="#about" class="text-gray-300 hover:text-white transition-colors py-2">关于我</a>
+        <a href="#upload" class="text-gray-300 hover:text-white transition-colors py-2">上传作品</a>
+        <a href="#contact" class="text-gray-300 hover:text-white transition-colors py-2">联系我</a>
+        <!-- 核心修改：移动端按钮同步替换为QQ图标 -->
+        <a href="#" class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors text-center">
+          <i class="fa fa-qq mr-2"></i>预约咨询
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 首屏英雄区 -->
+  <section class="min-h-screen flex items-center justify-center relative overflow-hidden hero-gradient pt-16">
+    <div class="absolute inset-0 z-0">
+      <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 rounded-full filter blur-3xl"></div>
+      <div class="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/10 rounded-full filter blur-3xl"></div>
+    </div>
+    
+    <div class="container mx-auto px-4 z-10">
+      <div class="flex flex-col md:flex-row items-center justify-between">
+        <div class="md:w-1/2 mb-12 md:mb-0">
+          <h1 class="text-4xl md:text-6xl font-bold mb-6 text-shadow-lg">
+            <span class="block">专业</span>
+            <span class="block mt-2">
+              <span class="text-primary">3D建模</span> & 
+              <span class="text-secondary">渲染</span>
+            </span>
+            <span class="block mt-2">设计师</span>
+          </h1>
+          <p class="text-xl text-gray-300 mb-8 max-w-lg">
+            专注于亚马逊产品主图、A+内容设计，为您的产品打造惊艳视觉体验，提升转化率。
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <a href="#portfolio" class="bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-md transition-all transform hover:-translate-y-1">
+              查看作品集
+            </a>
+            <a href="#contact" class="bg-transparent border border-white/30 hover:border-white text-white px-6 py-3 rounded-md transition-all transform hover:-translate-y-1">
+              联系我
+            </a>
+          </div>
+        </div>
+        
+        <div class="md:w-1/2 flex justify-center">
+          <div class="relative w-full max-w-md animate-float">
+            <div class="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl blur-xl"></div>
+            <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/73823b9b714d4c64a9b4971fd6d14c53~tplv-a9rns2rl98-image.image?rcl=202512021409497A324417D69A899A2EB1&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767247840&x-signature=b3pSQnxoTrQN5KYUXmSMi0cwVz4%3D" 
+                 alt="3D建模作品" 
+                 class="relative z-10 w-full rounded-2xl shadow-2xl">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 作品分类与筛选 -->
+  <section id="portfolio" class="py-20 bg-dark">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">精选作品集</h2>
+        <p class="text-gray-400 max-w-2xl mx-auto">
+          浏览我的最新3D建模和渲染作品，包括产品设计、亚马逊主图和A+内容。
+        </p>
+      </div>
+      
+      <!-- 分类筛选 -->
+      <div class="flex flex-wrap justify-center gap-3 mb-12">
+        <button class="category-btn active px-5 py-2 rounded-full bg-gray-800 hover:bg-primary text-white transition-colors" data-category="all">
+          全部作品
+        </button>
+        <button class="category-btn px-5 py-2 rounded-full bg-gray-800 hover:bg-primary text-white transition-colors" data-category="3D建模">
+          3D建模
+        </button>
+        <button class="category-btn px-5 py-2 rounded-full bg-gray-800 hover:bg-primary text-white transition-colors" data-category="渲染">
+          渲染
+        </button>
+        <button class="category-btn px-5 py-2 rounded-full bg-gray-800 hover:bg-primary text-white transition-colors" data-category="亚马逊主图">
+          亚马逊主图
+        </button>
+        <button class="category-btn px-5 py-2 rounded-full bg-gray-800 hover:bg-primary text-white transition-colors" data-category="A+内容">
+          A+内容
+        </button>
+      </div>
+      
+      <!-- 作品网格 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="portfolio-grid">
+        <!-- 作品项将通过JavaScript动态生成 -->
+      </div>
+      
+      <!-- 加载更多按钮 -->
+      <div class="text-center mt-12">
+        <button id="load-more" class="bg-transparent border border-gray-600 hover:border-primary text-white px-6 py-3 rounded-md transition-colors">
+          加载更多作品
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3D模型交互展示 -->
+  <section class="py-20 bg-gradient-to-b from-dark to-gray-900">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">3D模型交互预览</h2>
+        <p class="text-gray-400 max-w-2xl mx-auto">
+          体验交互式3D模型查看，旋转、缩放查看产品细节，为您的客户提供沉浸式产品体验。
+        </p>
+      </div>
+      
+      <div class="max-w-4xl mx-auto">
+        <div class="model-container relative">
+          <div id="model-viewer"></div>
+          <div class="controls-overlay">
+            <button class="control-btn" id="rotate-left" title="向左旋转">
+              <i class="fa fa-rotate-left"></i>
+            </button>
+            <button class="control-btn" id="rotate-right" title="向右旋转">
+              <i class="fa fa-rotate-right"></i>
+            </button>
+            <button class="control-btn" id="zoom-in" title="放大">
+              <i class="fa fa-search-plus"></i>
+            </button>
+            <button class="control-btn" id="zoom-out" title="缩小">
+              <i class="fa fa-search-minus"></i>
+            </button>
+            <button class="control-btn" id="reset-view" title="重置视图">
+              <i class="fa fa-refresh"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="mt-8 text-center">
+          <p class="text-gray-400 mb-4">提示：使用鼠标拖动可旋转模型，滚轮可缩放查看细节</p>
+          <a href="#upload" class="inline-block bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-md transition-colors">
+            上传您的3D模型
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 关于我 -->
+  <section id="about" class="py-20 bg-gray-900">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row items-center gap-12">
+        <div class="md:w-1/2">
+          <div class="relative">
+            <div class="absolute -inset-4 bg-gradient-to-r from-primary to-secondary rounded-xl blur opacity-25"></div>
+            <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/f044ba7976b3491c8a6e4f2fc945f223~tplv-a9rns2rl98-image.image?rcl=202512021409497A324417D69A899A2EB1&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767247841&x-signature=jWb1pEvCx6Ztb%2F5eW2yNHy5Vf8c%3D" 
+                 alt="设计师照片" 
+                 class="relative z-10 rounded-lg shadow-xl w-full max-w-md mx-auto">
+          </div>
+        </div>
+        
+        <div class="md:w-1/2">
+          <h2 class="text-3xl md:text-4xl font-bold mb-6">关于我</h2>
+          <p class="text-gray-300 mb-6">
+            我是一名拥有5年经验的3D建模和渲染设计师，专注于电商产品视觉设计，特别是亚马逊平台的产品展示。
+          </p>
+          <p class="text-gray-300 mb-6">
+            我擅长将产品的特点和优势通过高质量的3D模型和渲染图展现出来，帮助卖家提升产品形象，增加转化率。
+          </p>
+          
+          <div class="grid grid-cols-2 gap-6 mt-8">
+            <div>
+              <h3 class="text-xl font-semibold mb-3 text-primary">专业技能</h3>
+              <ul class="space-y-2 text-gray-300">
+                <li class="flex items-center">
+                  <i class="fa fa-check-circle text-primary mr-2"></i>
+                  3D建模
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-check-circle text-primary mr-2"></i>
+                  产品渲染
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-check-circle text-primary mr-2"></i>
+                  亚马逊主图设计
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-check-circle text-primary mr-2"></i>
+                  A+内容创作
+                </li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 class="text-xl font-semibold mb-3 text-secondary">使用软件</h3>
+              <ul class="space-y-2 text-gray-300">
+                <li class="flex items-center">
+                  <i class="fa fa-check-circle text-secondary mr-2"></i>
+                  Blender
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-check-circle text-secondary mr-2"></i>
+                  Cinema 4D
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-check-circle text-secondary mr-2"></i>
+                  Keyshot
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-check-circle text-secondary mr-2"></i>
+                  Photoshop
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 作品上传区 -->
+  <section id="upload" class="py-20 bg-dark">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">上传您的作品</h2>
+        <p class="text-gray-400 max-w-2xl mx-auto">
+          上传您的3D模型和渲染作品，展示您的才华，与其他设计师交流学习。
+        </p>
+      </div>
+      
+      <div class="max-w-4xl mx-auto bg-gray-900 rounded-xl p-8 shadow-xl">
+        <form id="upload-form" class="space-y-6">
+          <!-- 拖拽上传区域 -->
+          <div class="upload-area rounded-lg p-8 text-center cursor-pointer" id="drop-area">
+            <input type="file" id="file-input" class="hidden" accept="image/*,.obj,.fbx,.gltf,.glb" multiple>
+            <div class="flex flex-col items-center justify-center">
+              <i class="fa fa-cloud-upload text-5xl text-primary mb-4"></i>
+              <p class="text-lg text-gray-300 mb-2">拖拽文件到此处或点击上传</p>
+              <p class="text-sm text-gray-500">支持图片、OBJ、FBX、GLTF、GLB格式</p>
+            </div>
+          </div>
+          
+          <!-- 上传进度条 -->
+          <div class="hidden" id="upload-progress-container">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm text-gray-400">上传进度</span>
+              <span class="text-sm text-gray-400" id="upload-percentage">0%</span>
+            </div>
+            <div class="w-full bg-gray-800 rounded-full h-2.5">
+              <div class="bg-primary h-2.5 rounded-full" id="upload-progress-bar" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <!-- 预览区域 -->
+          <div class="hidden" id="preview-container">
+            <h3 class="text-lg font-semibold mb-3">预览</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4" id="preview-grid">
+              <!-- 预览图将在这里动态生成 -->
+            </div>
+          </div>
+          
+          <!-- 作品信息 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label for="title" class="block text-sm font-medium text-gray-400 mb-1">作品标题</label>
+              <input type="text" id="title" name="title" class="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
+            </div>
+            
+            <div>
+              <label for="category" class="block text-sm font-medium text-gray-400 mb-1">分类</label>
+              <select id="category" name="category" class="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="">选择分类</option>
+                <option value="3D建模">3D建模</option>
+                <option value="渲染">渲染</option>
+                <option value="亚马逊主图">亚马逊主图</option>
+                <option value="A+内容">A+内容</option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label for="description" class="block text-sm font-medium text-gray-400 mb-1">作品描述</label>
+            <textarea id="description" name="description" rows="4" class="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+          </div>
+          
+          <div>
+            <label for="tags" class="block text-sm font-medium text-gray-400 mb-1">标签</label>
+            <input type="text" id="tags" name="tags" placeholder="用逗号分隔多个标签" class="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
+          </div>
+          
+          <div class="flex justify-end space-x-4">
+            <button type="button" id="cancel-upload" class="px-6 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-800 transition-colors">
+              取消
+            </button>
+            <button type="submit" id="submit-upload" class="px-6 py-2 bg-primary hover:bg-blue-600 text-white rounded-md transition-colors">
+              上传作品
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- 联系我 -->
+  <section id="contact" class="py-20 bg-gradient-to-b from-gray-900 to-dark">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">联系我</h2>
+        <p class="text-gray-400 max-w-2xl mx-auto">
+          如果您有任何问题或项目需求，请随时与我联系，我将尽快回复您。
+        </p>
+      </div>
+      
+      <div class="max-w-4xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <!-- 联系信息 -->
+          <div class="bg-gray-900/50 backdrop-blur-sm p-8 rounded-xl border border-gray-800">
+            <h3 class="text-2xl font-semibold mb-6">联系方式</h3>
+            
+            <div class="space-y-6">
+              <div class="flex items-start">
+                <div class="bg-primary/10 p-3 rounded-full mr-4">
+                  <!-- 可选：联系信息区也替换为QQ图标 -->
+                  <i class="fa fa-qq text-primary text-xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-lg font-medium mb-1">QQ</h4>
+                  <p class="text-gray-400">123456789</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="bg-primary/10 p-3 rounded-full mr-4">
+                  <i class="fa fa-phone text-primary text-xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-lg font-medium mb-1">电话</h4>
+                  <p class="text-gray-400">+86 123 4567 8910</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="bg-primary/10 p-3 rounded-full mr-4">
+                  <i class="fa fa-map-marker text-primary text-xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-lg font-medium mb-1">地址</h4>
+                  <p class="text-gray-400">中国，上海</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-8">
+              <h4 class="text-lg font-medium mb-4">社交媒体</h4>
+              <div class="flex space-x-4">
+                <a href="#" class="bg-gray-800 hover:bg-primary w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                  <i class="fa fa-behance text-white"></i>
+                </a>
+                <a href="#" class="bg-gray-800 hover:bg-primary w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                  <i class="fa fa-dribbble text-white"></i>
+                </a>
+                <a href="#" class="bg-gray-800 hover:bg-primary w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                  <i class="fa fa-instagram text-white"></i>
+                </a>
+                <a href="#" class="bg-gray-800 hover:bg-primary w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                  <i class="fa fa-linkedin text-white"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 联系表单 -->
+          <div class="bg-gray-900/50 backdrop-blur-sm p-8 rounded-xl border border-gray-800">
+            <h3 class="text-2xl font-semibold mb-6">发送消息</h3>
+            
+            <form id="contact-form" class="space-y-6">
+              <div>
+                <label for="name" class="block text-sm font-medium text-gray-400 mb-1">姓名</label>
+                <input type="text" id="name" name="name" class="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+              
+              <div>
+                <label for="email" class="block text-sm font-medium text-gray-400 mb-1">邮箱</label>
+                <input type="email" id="email" name="email" class="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+              
+              <div>
+                <label for="subject" class="block text-sm font-medium text-gray-400 mb-1">主题</label>
+                <input type="text" id="subject" name="subject" class="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+              
+              <div>
+                <label for="message" class="block text-sm font-medium text-gray-400 mb-1">消息</label>
+                <textarea id="message" name="message" rows="4" class="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+              </div>
+              
+              <button type="submit" class="w-full bg-primary hover:bg-blue-600 text-white py-3 rounded-md transition-colors">
+                发送消息
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 页脚 -->
+  <footer class="bg-dark py-12 border-t border-gray-800">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-6 md:mb-0">
+          <a href="#" class="text-2xl font-bold text-white">
+            <span class="text-primary">3D</span>Designer
+          </a>
+          <p class="text-gray-400 mt-2">专业3D建模与渲染设计</p>
+        </div>
+        
+        <div class="flex flex-wrap justify-center gap-x-8 gap-y-4">
+          <a href="#portfolio" class="text-gray-400 hover:text-white transition-colors">作品集</a>
+          <a href="#about" class="text-gray-400 hover:text-white transition-colors">关于我</a>
+          <a href="#upload" class="text-gray-400 hover:text-white transition-colors">上传作品</a>
+          <a href="#contact" class="text-gray-400 hover:text-white transition-colors">联系我</a>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+        <p class="text-gray-500 text-sm mb-4 md:mb-0">
+          &copy; 2023 3D设计师作品集. 保留所有权利.
+        </p>
+        
+        <div class="flex space-x-4">
+          <a href="#" class="text-gray-500 hover:text-white transition-colors">
+            <i class="fa fa-behance"></i>
+          </a>
+          <a href="#" class="text-gray-500 hover:text-white transition-colors">
+            <i class="fa fa-dribbble"></i>
+          </a>
+          <a href="#" class="text-gray-500 hover:text-white transition-colors">
+            <i class="fa fa-instagram"></i>
+          </a>
+          <a href="#" class="text-gray-500 hover:text-white transition-colors">
+            <i class="fa fa-linkedin"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 作品详情模态框 -->
+  <div id="portfolio-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative z-10 max-w-6xl mx-auto mt-20 mb-10 px-4">
+      <div class="bg-gray-900 rounded-xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+        <!-- 模态框头部 -->
+        <div class="flex justify-between items-center p-6 border-b border-gray-800">
+          <h3 id="modal-title" class="text-2xl font-bold"></h3>
+          <button id="close-modal" class="text-gray-400 hover:text-white">
+            <i class="fa fa-times text-xl"></i>
+          </button>
+        </div>
+        
+        <!-- 模态框内容 -->
+        <div class="flex-grow overflow-y-auto p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- 作品图片/模型 -->
+            <div>
+              <div id="modal-image-container" class="mb-4">
+                <!-- 大图将在这里显示 -->
+              </div>
+              
+              <!-- 缩略图导航 -->
+              <div id="modal-thumbnails" class="flex gap-2 overflow-x-auto scrollbar-hide py-2">
+                <!-- 缩略图将在这里动态生成 -->
+              </div>
+            </div>
+            
+            <!-- 作品信息 -->
+            <div>
+              <div id="modal-category" class="inline-block bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium mb-4"></div>
+              <p id="modal-description" class="text-gray-300 mb-6"></p>
+              
+              <div class="space-y-4">
+                <div>
+                  <h4 class="text-lg font-medium mb-2">标签</h4>
+                  <div id="modal-tags" class="flex flex-wrap gap-2">
+                    <!-- 标签将在这里动态生成 -->
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 class="text-lg font-medium mb-2">相关作品</h4>
+                  <div id="modal-related" class="grid grid-cols-2 gap-3">
+                    <!-- 相关作品将在这里动态生成 -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 模态框底部 -->
+        <div class="p-6 border-t border-gray-800 flex justify-between items-center">
+          <button id="view-3d-model" class="bg-primary hover:bg-blue-600 text-white px-6 py-2 rounded-md transition-colors hidden">
+            <i class="fa fa-cube mr-2"></i> 查看3D模型
+          </button>
+          
+          <div>
+            <button id="share-portfolio" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors mr-2">
+              <i class="fa fa-share-alt mr-1"></i> 分享
+            </button>
+            <button id="download-portfolio" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors">
+              <i class="fa fa-download mr-1"></i> 下载
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    // 模拟数据 - 作品集
+    const portfolioData = [
+      {
+        id: 1,
+        title: "无线耳机3D建模",
+        category: "3D建模",
+        description: "高品质无线耳机3D模型，精细细节展示，适合电商产品展示和营销材料。",
+        images: [
+          "https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/73823b9b714d4c64a9b4971fd6d14c53~tplv-a9rns2rl98-image.image?rcl=202512021409497A324417D69A899A2EB1&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767247840&x-signature=b3pSQnxoTrQN5KYUXmSMi0cwVz4%3D"
+        ],
+        model3d: true,
+        tags: ["无线耳机", "电子产品", "3D建模"]
+      },
+      {
+        id: 2,
+        title: "智能手表渲染",
+        category: "渲染",
+        description: "未来感智能手表渲染图，展示产品细节和功能特点，适合电商平台展示。",
+        images: [
+          "https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/f044ba7976b3491c8a6e4f2fc945f223~tplv-a9rns2rl98-image.image?rcl=202512021409497A324417D69A899A2EB1&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767247841&x-signature=jWb1pEvCx6Ztb%2F5eW2yNHy5Vf8c%3D"
+        ],
+        model3d: false,
+        tags: ["智能手表", "电子产品", "渲染"]
+      },
+      {
+        id: 3,
+        title: "亚马逊蓝牙音箱主图",
+        category: "亚马逊主图",
+        description: "符合亚马逊平台要求的产品主图，纯白背景，突出产品特点，提高点击率。",
+        images: [
+          "https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/dabec465fbd64c06b36784568a229c5a~tplv-a9rns2rl98-image.image?rcl=202512021409497A324417D69A899A2EB1&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767247839&x-signature=0YtF5JQMQ9PZvcHH%2B24pPhKyLKY%3D"
+        ],
+        model3d: false,
+        tags: ["蓝牙音箱", "亚马逊主图", "产品摄影"]
+      },
+      {
+        id: 4,
+        title: "现代台灯3D模型",
+        category: "3D建模",
+        description: "现代简约风格台灯3D模型，精细材质和灯光效果，适合家居产品展示。",
+        images: [
+          "https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/f5ea38e6b97645b89dd1b85ddb8c1f6e~tplv-a9rns2rl98-image.image?rcl=202512021409497A324417D69A899A2EB1&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767247839&x-signature=0UmdcB07kQoV35cJowzCJ%2FXmabg%3D"
+        ],
+        model3d: true,
+        tags: ["台灯", "家居产品", "3D建模"]
+      },
+      {
+        id: 5,
+        title: "无线充电器A+内容",
+        category: "A+内容",
+        description: "亚马逊A+内容设计，多角度展示无线充电器功能和特点，提升产品转化率。",
+        images: [
+          "https://p9-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/e30b4b49efd1474fae3b6f37288f86bc~tplv-a9rns2rl98-image.image?rcl=202512021409497A324417D69A899A2EB1&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767247842&x-signature=RZZNDAbNLjIvZubCETnOQ5ory9k%3D"
+        ],
+        model3d: false,
+        tags: ["无线充电器", "A+内容", "电商设计"]
+      },
+      {
+        id: 6,
+        title: "奢华香水瓶渲染",
+        category: "渲染",
+        description: "高端奢华香水瓶渲染图，展示产品质感和设计细节，适合奢侈品营销。",
+        images: [
+          "https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/f2d5212222664325a99585fb447ae619~tplv-a9rns2rl98-image.image?rcl=202512021409497A324417D69A899A2EB1&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767247841&x-signature=sxnAa2lTe8gLj6nxQwU9qWTbu2g%3D"
+        ],
+        model3d: true,
+        tags: ["香水瓶", "奢侈品", "产品渲染"]
+      }
+    ];
+
+    // DOM加载完成后执行
+    document.addEventListener('DOMContentLoaded', function() {
+      // 初始化页面
+      initPortfolio();
+      initModelViewer();
+      initUploadArea();
+      initContactForm();
+      initScrollAnimations();
+      initMobileMenu();
+      
+      // 初始化模态框
+      initModal();
+    });
+
+    // 初始化作品集
+    function initPortfolio() {
+      const portfolioGrid = document.getElementById('portfolio-grid');
+      const categoryButtons = document.querySelectorAll('.category-btn');
+      const loadMoreBtn = document.getElementById('load-more');
+      
+      let currentCategory = 'all';
+      let visibleItems = 6; // 初始显示的项目数量
+      const itemsPerLoad = 3; // 每次加载更多的项目数量
+      
+      // 渲染作品集
+      function renderPortfolio() {
+        portfolioGrid.innerHTML = '';
+        
+        // 筛选作品
+        const filteredItems = currentCategory === 'all' 
+          ? portfolioData 
+          : portfolioData.filter(item => item.category === currentCategory);
+        
+        // 限制显示数量
+        const itemsToShow = filteredItems.slice(0, visibleItems);
+        
+        itemsToShow.forEach(item => {
+          const portfolioItem = document.createElement('div');
+          portfolioItem.className = 'bg-gray-900 rounded-xl overflow-hidden shadow-lg card-hover fade-in-section';
+          portfolioItem.dataset.category = item.category;
+          portfolioItem.dataset.id = item.id;
+          
+          portfolioItem.innerHTML = `
+            <div class="relative aspect-[4/5] overflow-hidden">
+              <img src="${item.images[0]}" alt="${item.title}" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 hover:opacity-100 transition-opacity flex items-end">
+                <div class="p-4">
+                  <h3 class="text-xl font-bold text-white">${item.title}</h3>
+                  <p class="text-gray-300 text-sm">${item.category}</p>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          // 点击事件
+          portfolioItem.addEventListener('click', () => openPortfolioModal(item.id));
+          
+          portfolioGrid.appendChild(portfolioItem);
+        });
+        
+        // 显示/隐藏加载更多按钮
+        if (itemsToShow.length < filteredItems.length) {
+          loadMoreBtn.classList.remove('hidden');
+        } else {
+          loadMoreBtn.classList.add('hidden');
+        }
+        
+        // 触发滚动动画
+        setTimeout(() => {
+          const fadeElements = document.querySelectorAll('.fade-in-section');
+          fadeElements.forEach(element => {
+            element.classList.add('is-visible');
+          });
+        }, 100);
+      }
+      
+      // 初始渲染
+      renderPortfolio();
+      
+      // 分类按钮点击事件
+      categoryButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          // 更新活动状态
+          categoryButtons.forEach(btn => btn.classList.remove('active'));
+          button.classList.add('active');
+          
+          // 更新当前分类
+          currentCategory = button.dataset.category;
+          
+          // 重置显示数量
+          visibleItems = 6;
+          
+          // 重新渲染
+          renderPortfolio();
+        });
+      });
+      
+      // 加载更多按钮点击事件
+      loadMoreBtn.addEventListener('click', () => {
+        visibleItems += itemsPerLoad;
+        renderPortfolio();
+      });
+    }
+
+    // 初始化3D模型查看器
+    function initModelViewer() {
+      // 创建场景
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x121212);
+      
+      // 创建相机
+      const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+      camera.position.z = 5;
+      
+      // 创建渲染器
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(document.getElementById('model-viewer').clientWidth, 400);
+      document.getElementById('model-viewer').appendChild(renderer.domElement);
+      
+      // 添加环境光
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+      
+      // 添加方向光
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(1, 1, 1);
+      scene.add(directionalLight);
+      
+      // 添加控制器
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      
+      // 创建一个简单的几何体作为示例
+      const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+      const material = new THREE.MeshStandardMaterial({ 
+        color: 0x3B82F6,
+        metalness: 0.7,
+        roughness: 0.2
+      });
+      const torusKnot = new THREE.Mesh(geometry, material);
+      scene.add(torusKnot);
+      
+      // 动画循环
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      
+      // 开始动画
+      animate();
+      
+      // 窗口大小调整
+      window.addEventListener('resize', () => {
+        const container = document.getElementById('model-viewer');
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      });
+      
+      // 控制按钮
+      document.getElementById('rotate-left').addEventListener('click', () => {
+        torusKnot.rotation.y -= Math.PI / 4;
+      });
+      
+      document.getElementById('rotate-right').addEventListener('click', () => {
+        torusKnot.rotation.y += Math.PI / 4;
+      });
+      
+      document.getElementById('zoom-in').addEventListener('click', () => {
+        camera.position.z = Math.max(camera.position.z - 0.5, 2);
+      });
+      
+      document.getElementById('zoom-out').addEventListener('click', () => {
+        camera.position.z = Math.min(camera.position.z + 0.5, 10);
+      });
+      
+      document.getElementById('reset-view').addEventListener('click', () => {
+        camera.position.set(0, 0, 5);
+        torusKnot.rotation.set(0, 0, 0);
+        controls.reset();
+      });
+    }
+
+    // 初始化上传区域
+    function initUploadArea() {
+      const dropArea = document.getElementById('drop-area');
+      const fileInput = document.getElementById('file-input');
+      const uploadProgressContainer = document.getElementById('upload-progress-container');
+      const uploadProgressBar = document.getElementById('upload-progress-bar');
+      const uploadPercentage = document.getElementById('upload-percentage');
+      const previewContainer = document.getElementById('preview-container');
+      const previewGrid = document.getElementById('preview-grid');
+      const cancelUploadBtn = document.getElementById('cancel-upload');
+      const submitUploadBtn = document.getElementById('submit-upload');
+      
+      // 拖拽事件
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      // 高亮效果
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, highlight, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, unhighlight, false);
+      });
+      
+      function highlight() {
+        dropArea.classList.add('dragover');
+      }
+      
+      function unhighlight() {
+        dropArea.classList.remove('dragover');
+      }
+      
+      // 处理拖放文件
+      dropArea.addEventListener('drop', handleDrop, false);
+      
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        handleFiles(files);
+      }
+      
+      // 点击上传
+      dropArea.addEventListener('click', () => {
+        fileInput.click();
+      });
+      
+      fileInput.addEventListener('change', () => {
+        handleFiles(fileInput.files);
+      });
+      
+      // 处理文件
+      function handleFiles(files) {
+        if (files.length === 0) return;
+        
+        // 显示进度条
+        uploadProgressContainer.classList.remove('hidden');
+        
+        // 模拟上传进度
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 5;
+          uploadProgressBar.style.width = `${progress}%`;
+          uploadPercentage.textContent = `${progress}%`;
+          
+          if (progress >= 100) {
+            clearInterval(interval);
+            
+            // 显示预览
+            setTimeout(() => {
+              uploadProgressContainer.classList.add('hidden');
+              previewContainer.classList.remove('hidden');
+              
+              // 创建预览
+              previewGrid.innerHTML = '';
+              
+              Array.from(files).forEach(file => {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'relative aspect-square rounded-md overflow-hidden';
+                
+                if (file.type.startsWith('image/')) {
+                  const reader = new FileReader();
+                  reader.onload = function(e) {
+                    previewItem.innerHTML = `
+                      <img src="${e.target.result}" alt="${file.name}" class="w-full h-full object-cover">
+                      <button class="absolute top-1 right-1 bg-black/50 hover:bg-black/70 text-white w-6 h-6 rounded-full flex items-center justify-center">
+                        <i class="fa fa-times"></i>
+                      </button>
+                    `;
+                    
+                    // 删除按钮事件
+                    previewItem.querySelector('button').addEventListener('click', () => {
+                      previewItem.remove();
+                      if (previewGrid.children.length === 0) {
+                        previewContainer.classList.add('hidden');
+                      }
+                    });
+                  };
+                  reader.readAsDataURL(file);
+                } else {
+                  previewItem.innerHTML = `
+                    <div class="w-full h-full bg-gray-800 flex items-center justify-center">
+                      <i class="fa fa-file-o text-2xl text-gray-500"></i>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 truncate">
+                      ${file.name}
+                    </div>
+                    <button class="absolute top-1 right-1 bg-black/50 hover:bg-black/70 text-white w-6 h-6 rounded-full flex items-center justify-center">
+                      <i class="fa fa-times"></i>
+                    </button>
+                  `;
+                  
+                  // 删除按钮事件
+                  previewItem.querySelector('button').addEventListener('click', () => {
+                    previewItem.remove();
+                    if (previewGrid.children.length === 0) {
+                      previewContainer.classList.add('hidden');
+                    }
+                  });
+                }
+                
+                previewGrid.appendChild(previewItem);
+              });
+            }, 500);
+          }
+        }, 100);
+      }
+      
+      // 取消上传
+      cancelUploadBtn.addEventListener('click', () => {
+        fileInput.value = '';
+        uploadProgressContainer.classList.add('hidden');
+        previewContainer.classList.add('hidden');
+        previewGrid.innerHTML = '';
+        uploadProgressBar.style.width = '0%';
+        uploadPercentage.textContent = '0%';
+      });
+      
+      // 提交上传
+      document.getElementById('upload-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 获取表单数据
+        const title = document.getElementById('title').value;
+        const category = document.getElementById('category').value;
+        const description = document.getElementById('description').value;
+        const tags = document.getElementById('tags').value;
+        
+        // 表单验证
+        if (!title || !category || previewGrid.children.length === 0) {
+          alert('请填写必要信息并上传文件');
+          return;
+        }
+        
+        // 模拟提交
+        submitUploadBtn.disabled = true;
+        submitUploadBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 上传中...';
+        
+        setTimeout(() => {
+          alert('作品上传成功！');
+          
+          // 重置表单
+          document.getElementById('upload-form').reset();
+          previewContainer.classList.add('hidden');
+          previewGrid.innerHTML = '';
+          submitUploadBtn.disabled = false;
+          submitUploadBtn.innerHTML = '上传作品';
+        }, 1500);
+      });
+    }
+
+    // 初始化联系表单
+    function initContactForm() {
+      const contactForm = document.getElementById('contact-form');
+      
+      contactForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 获取表单数据
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const subject = document.getElementById('subject').value;
+        const message = document.getElementById('message').value;
+        
+        // 表单验证
+        if (!name || !email || !message) {
+          alert('请填写必要信息');
+          return;
+        }
+        
+        // 模拟提交
+        const submitBtn = contactForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 发送中...';
+        
+        setTimeout(() => {
+          alert('消息发送成功！我会尽快回复您。');
+          
+          // 重置表单
+          contactForm.reset();
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '发送消息';
+        }, 1500);
+      });
+    }
+
+    // 初始化滚动动画
+    function initScrollAnimations() {
+      // 监听滚动事件
+      window.addEventListener('scroll', () => {
+        const fadeElements = document.querySelectorAll('.fade-in-section');
+        
+        fadeElements.forEach(element => {
+          const elementTop = element.getBoundingClientRect().top;
+          const elementBottom = element.getBoundingClientRect().bottom;
+          const isVisible = (elementTop < window.innerHeight - 100) && (elementBottom > 0);
+          
+          if (isVisible) {
+            element.classList.add('is-visible');
+          }
+        });
+      });
+    }
+
+    // 初始化移动端菜单
+    function initMobileMenu() {
+      const menuToggle = document.getElementById('menu-toggle');
+      const mobileMenu = document.getElementById('mobile-menu');
+      
+      menuToggle.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+      
+      // 点击菜单项关闭菜单
+      const mobileMenuItems = mobileMenu.querySelectorAll('a');
+      mobileMenuItems.forEach(item => {
+        item.addEventListener('click', () => {
+          mobileMenu.classList.add('hidden');
+        });
+      });
+    }
+
+    // 初始化作品集模态框
+    function initModal() {
+      const modal = document.getElementById('portfolio-modal');
+      const closeModal = document.getElementById('close-modal');
+      
+      // 关闭模态框
+      closeModal.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+      });
+      
+      // 点击模态框外部关闭
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.add('hidden');
+          document.body.style.overflow = 'auto';
+        }
+      });
+    }
+
+    // 打开作品集模态框
+    function openPortfolioModal(id) {
+      const modal = document.getElementById('portfolio-modal');
+      const closeModal = document.getElementById('close-modal');
+      const modalTitle = document.getElementById('modal-title');
+      const modalCategory = document.getElementById('modal-category');
+      const modalDescription = document.getElementById('modal-description');
+      const modalImageContainer = document.getElementById('modal-image-container');
+      const modalThumbnails = document.getElementById('modal-thumbnails');
+      const modalTags = document.getElementById('modal-tags');
+      const modalRelated = document.getElementById('modal-related');
+      const view3DModelBtn = document.getElementById('view-3d-model');
+      
+      // 获取作品数据
+      const item = portfolioData.find(item => item.id === parseInt(id));
+      if (!item) return;
+      
+      // 设置标题和分类
+      modalTitle.textContent = item.title;
+      modalCategory.textContent = item.category;
+      modalCategory.className = `inline-block bg-${getCategoryColor(item.category)}/20 text-${getCategoryColor(item.category)} px-3 py-1 rounded-full text-sm font-medium mb-4`;
+      
+      // 设置描述
+      modalDescription.textContent = item.description;
+      
+      // 设置主图
+      modalImageContainer.innerHTML = `
+        <img src="${item.images[0]}" alt="${item.title}" class="w-full h-auto rounded-lg">
+      `;
+      
+      // 设置缩略图
+      modalThumbnails.innerHTML = '';
+      item.images.forEach((image, index) => {
+        const thumbnail = document.createElement('div');
+        thumbnail.className = `w-16 h-16 rounded-md overflow-hidden border-2 ${index === 0 ? 'border-primary' : 'border-transparent'}`;
+        thumbnail.innerHTML = `<img src="${image}" alt="缩略图 ${index + 1}" class="w-full h-full object-cover">`;
+        
+        // 点击切换主图
+        thumbnail.addEventListener('click', () => {
+          modalImageContainer.innerHTML = `<img src="${image}" alt="${item.title}" class="w-full h-auto rounded-lg">`;
+          
+          // 更新边框
+          modalThumbnails.querySelectorAll('div').forEach(thumb => {
+            thumb.classList.remove('border-primary');
+            thumb.classList.add('border-transparent');
+          });
+          thumbnail.classList.remove('border-transparent');
+          thumbnail.classList.add('border-primary');
+        });
+        
+        modalThumbnails.appendChild(thumbnail);
+      });
+      
+      // 设置标签
+      modalTags.innerHTML = '';
+      item.tags.forEach(tag => {
+        const tagElement = document.createElement('span');
+        tagElement.className = 'bg-gray-800 text-gray-300 px-2 py-1 rounded-md text-sm';
+        tagElement.textContent = tag;
+        modalTags.appendChild(tagElement);
+      });
+      
+      // 设置相关作品
+      modalRelated.innerHTML = '';
+      const relatedItems = portfolioData
+        .filter(related => related.id !== item.id && related.category === item.category)
+        .slice(0, 4);
+      
+      relatedItems.forEach(related => {
+        const relatedItem = document.createElement('div');
+        relatedItem.className = 'bg-gray-800 rounded-md overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all';
+        relatedItem.innerHTML = `
+          <img src="${related.images[0]}" alt="${related.title}" class="w-full h-24 object-cover">
+          <div class="p-2">
+            <h5 class="text-sm font-medium truncate">${related.title}</h5>
+          </div>
+        `;
+        
+        // 点击打开相关作品
+        relatedItem.addEventListener('click', () => openPortfolioModal(related.id));
+        
+        modalRelated.appendChild(relatedItem);
+      });
+      
+      // 显示/隐藏3D模型按钮
+      if (item.model3d) {
+        view3DModelBtn.classList.remove('hidden');
+      } else {
+        view3DModelBtn.classList.add('hidden');
+      }
+      
+      // 显示模态框
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // 获取分类颜色
+    function getCategoryColor(category) {
+      switch (category) {
+        case '3D建模': return 'primary';
+        case '渲染': return 'secondary';
+        case '亚马逊主图': return 'yellow-500';
+        case 'A+内容': return 'purple-500';
+        default: return 'gray-500';
+      }
+    }
+
+    // 加载更多按钮点击事件
+    document.getElementById('load-more').addEventListener('click', function() {
+      const loadMoreBtn = document.getElementById('load-more');
+      loadMoreBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 加载中...';
+      
+      // 模拟加载延迟
+      setTimeout(() => {
+        // 更新显示数量
+        const visibleItems = document.querySelectorAll('#portfolio-grid > div').length;
+        const portfolioGrid = document.getElementById('portfolio-grid');
+        
+        // 获取当前分类
+        const activeCategory = document.querySelector('.category-btn.active').dataset.category;
+        
+        // 筛选作品
+        const filteredItems = activeCategory === 'all' 
+          ? portfolioData 
+          : portfolioData.filter(item => item.category === activeCategory);
+        
+        // 计算要加载的项目
+        const startIndex = visibleItems;
+        const endIndex = startIndex + 3;
+        const newItems = filteredItems.slice(startIndex, endIndex);
+        
+        // 添加新项目
+        newItems.forEach(item => {
+          const portfolioItem = document.createElement('div');
+          portfolioItem.className = 'bg-gray-900 rounded-xl overflow-hidden shadow-lg card-hover fade-in-section';
+          portfolioItem.dataset.category = item.category;
+          portfolioItem.dataset.id = item.id;
+          
+          portfolioItem.innerHTML = `
+            <div class="relative aspect-[4/5] overflow-hidden">
+              <img src="${item.images[0]}" alt="${item.title}" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 hover:opacity-100 transition-opacity flex items-end">
+                <div class="p-4">
+                  <h3 class="text-xl font-bold text-white">${item.title}</h3>
+                  <p class="text-gray-300 text-sm">${item.category}</p>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          // 点击事件
+          portfolioItem.addEventListener('click', () => openPortfolioModal(item.id));
+          
+          portfolioGrid.appendChild(portfolioItem);
+        });
+        
+        // 触发滚动动画
+        setTimeout(() => {
+          const fadeElements = document.querySelectorAll('.fade-in-section');
+          fadeElements.forEach(element => {
+            element.classList.add('is-visible');
+          });
+        }, 100);
+        
+        // 更新按钮状态
+        loadMoreBtn.innerHTML = '加载更多作品';
+        if (endIndex >= filteredItems.length) {
+          loadMoreBtn.classList.add('hidden');
+        }
+      }, 1000);
+    });
+
+    // 获取分类颜色
+    function getCategoryColor(category) {
+      switch (category) {
+        case '3D建模': return 'primary';
+        case '渲染': return 'secondary';
+        case '亚马逊主图': return 'yellow-500';
+        case 'A+内容': return 'purple-500';
+        default: return 'gray-500';
+      }
+    }
+  </script>
+</body>
+</html>
